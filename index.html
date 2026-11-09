@@ -153,6 +153,39 @@
   .cout .oseal{position:absolute;top:40px;right:14px;width:46px;height:46px;border:2px solid var(--seal);border-radius:50%;color:var(--seal);font-size:10px;font-weight:700;display:grid;place-items:center;transform:rotate(-9deg);opacity:.7;pointer-events:none;line-height:1.2;text-align:center}
   .tin{width:100%;font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:#fff}
   .tin:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+  /* 키워드 그룹 */
+  .kgroup{margin-bottom:14px}
+  .kgroup:last-child{margin-bottom:0}
+  .klabel{font-size:12px;font-weight:700;color:var(--muted);margin:0 0 7px;letter-spacing:-.01em}
+  .klabel .ncs{color:var(--accent);font-weight:700}
+
+  /* 선생님 어조 */
+  .voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+  .voices button{appearance:none;font-family:inherit;cursor:pointer;text-align:left;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:700;transition:all .14s;line-height:1.35}
+  .voices button small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:3px}
+  .voices button:hover{border-color:var(--accent)}
+  .voices button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 10px rgba(46,82,102,.22)}
+  .voices button[aria-pressed="true"] small{color:rgba(255,255,255,.82)}
+  .voiceDesc{margin-top:12px;background:#F6F7F9;border:1px solid var(--line-soft);border-radius:10px;padding:11px 14px;font-size:13px;line-height:1.6;color:#3a4550}
+  .voiceDesc .ex{display:block;margin-top:6px;color:var(--muted);font-size:12.5px}
+
+  /* 사실 입력 안내 · 기록 */
+  .tipline{font-size:12px;color:#8a6a1f;background:#FBF5E6;border:1px solid #EFE0B8;border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.5}
+  .histline{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+  .histline button{font-family:inherit;font-size:12px;border:none;background:none;color:var(--accent);cursor:pointer;text-decoration:underline;padding:0 2px}
+
+  /* 표현 다양성 */
+  .divseg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .divseg button{appearance:none;font-family:inherit;border:none;border-right:1px solid var(--line);background:#fff;color:var(--ink);font-size:13px;font-weight:600;padding:10px 0;cursor:pointer}
+  .divseg button:last-child{border-right:none}
+  .divseg button:hover{background:var(--accent-soft)}
+  .divseg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+
+  /* 결과 카드 보조 */
+  .simBadge{font-size:11.5px;font-weight:700;color:#8a6a1f;background:#FBF5E6;border:1px solid #EFE0B8;border-radius:999px;padding:3px 9px;display:none}
+  .simBadge.show{display:inline-block}
+  .simBadge.ok{color:var(--ok);background:var(--ok-soft);border-color:#bfe0cd}
 </style>
 </head>
 <body>
@@ -204,7 +237,7 @@
   </div>
 
   <div class="panel">
-    <div class="step"><span class="n">2</span><h2>키워드 선택</h2><span class="hint">키워드는 2~3개 정도 선택을 권장</span></div>
+    <div class="step"><span class="n">2</span><h2>키워드 선택</h2><span class="hint" id="kwCount">2~3개 선택 권장 · 선택 0개</span></div>
     <div id="semBox" style="display:none;margin-bottom:16px">
       <label class="fld">학기 선택</label>
       <div class="clubwrap" id="semSeg"></div>
@@ -213,7 +246,7 @@
       <label class="fld">동아리 선택</label>
       <div class="clubwrap" id="clubSeg"></div>
     </div>
-    <div class="chips" id="chips"></div>
+    <div id="chips"></div>
     <div class="addrow">
       <input id="addInput" type="text" placeholder="직접 추가할 키워드 입력 후 Enter">
       <button id="addBtn">+ 추가</button>
@@ -221,11 +254,18 @@
   </div>
 
   <div class="panel">
-    <div class="step"><span class="n">3</span><h2>구체적 사실 &amp; 글자 수</h2><span class="hint">사실을 적을수록 정확해집니다</span></div>
+    <div class="step"><span class="n">3</span><h2>선생님 어조</h2><span class="hint">고른 어조는 이 브라우저에 저장됩니다</span></div>
+    <div class="voices" id="voiceSeg"></div>
+    <div class="voiceDesc" id="voiceDesc"></div>
+  </div>
+
+  <div class="panel">
+    <div class="step"><span class="n">4</span><h2>구체적 사실 &amp; 글자 수</h2><span class="hint">사실을 적을수록 정확해집니다</span></div>
     <div class="grid2">
       <div>
         <label class="fld" for="specifics">구체적 활동·사실 (선택)</label>
         <textarea id="specifics" placeholder="예) 학급 환경부장으로 한 학기 동안 청소 구역을 직접 배정하고 점검함 / 동아리 전시회에 출품할 포스터를 제작함"></textarea>
+        <div class="tipline" id="specTip">구체적 사실을 비워 두면 다른 학생과 비슷한 문구가 나오기 쉽습니다. 한 줄이라도 적어 주세요.</div>
       </div>
       <div class="lenbox">
         <label class="fld">목표 글자 수</label>
@@ -241,11 +281,15 @@
           <button id="cntPlus" type="button">+</button>
         </div>
         <div class="cap">서로 다른 버전 1~5개</div>
+        <label class="fld" style="margin-top:14px">표현 다양성</label>
+        <div class="divseg" id="divSeg"></div>
+        <div class="cap" id="divCap"></div>
       </div>
     </div>
     <div style="height:14px"></div>
     <button class="gen" id="genBtn" disabled>문구 생성</button>
     <div class="genHint" id="genHint">설정에서 API 키를 먼저 입력하세요.</div>
+    <div class="histline">최근 생성한 문구 <b id="histN">0</b>개를 기억해 자주 쓰인 표현을 피합니다 · <button type="button" id="histClear">기록 지우기</button></div>
     <div class="err" id="err"></div>
   </div>
 
@@ -324,12 +368,79 @@
 <div class="toast" id="toast">복사되었습니다</div>
 
 <script>
+/* 항목별 키워드: [그룹 이름, [키워드…]] */
 const CATEGORIES = {
-  "자율활동": ["학급 자치 참여","1인 1역 성실 수행","학급 행사 기획","규칙 준수","솔선수범","공동체 의식","협력과 배려","갈등 중재","의견 경청","책임감 있는 역할 수행","적극적 참여","봉사 정신"],
-  "동아리활동": ["전공 분야 관심","자기주도적 탐구","꾸준한 참여","작품·결과물 제작","협업과 역할 분담","발표·공유","새로운 기술 습득","창의적 표현","문제 해결력","성실한 연습","대회·전시 참여","후배 지도"],
-  "진로활동": ["진로 탐색 적극성","자기 이해","직업 세계 이해","진로 목표 구체화","자격증 취득 노력","현장·실무 관심","진로 계획 수립","직업 가치관 형성","정보 수집·활용","진로 상담 참여","강점 발견","끈기 있는 준비"],
-  "행동특성 및 종합의견": ["성실성","책임감","배려심","끈기","예의 바름","긍정적 태도","자기관리","원만한 대인관계","학습 의지","성장 가능성","정직함","협동심","리더십","꼼꼼함"]
+  "자율활동": [
+    ["학급 자치·역할", ["학급 자치 참여","1인 1역 성실 수행","학급 임원 활동","학급 회의 진행","학급 규칙 제정 참여","책임감 있는 역할 수행","환경 정리·미화","학급 게시판 관리"]],
+    ["행사·봉사", ["학급 행사 기획","체육대회 참여","축제·발표회 준비","캠페인 활동","봉사 정신","안전교육 참여","교내 행사 지원"]],
+    ["태도·인성", ["규칙 준수","솔선수범","공동체 의식","적극적 참여","시간 약속 준수","정리정돈 습관","공공질서 존중"]],
+    ["관계·소통", ["협력과 배려","갈등 중재","의견 경청","친구 돕기","다양성 존중","학급 분위기 조성","건의·제안"]]
+  ],
+  "동아리활동": [
+    ["탐구·학습", ["전공 분야 관심","자기주도적 탐구","새로운 기술 습득","자료 조사·분석","문제 해결력","실습 안전 준수"]],
+    ["참여·태도", ["꾸준한 참여","성실한 연습","동아리 규칙 준수","장비·물품 관리","끈기 있는 도전"]],
+    ["협업·리더십", ["협업과 역할 분담","후배 지도","동아리 운영 참여","팀워크 향상 기여","갈등 조율"]],
+    ["결과·성과", ["작품·결과물 제작","발표·공유","대회·전시 참여","창의적 표현","기록·포트폴리오 정리","기량 향상"]]
+  ],
+  "진로활동": [
+    ["진로 탐색", ["진로 탐색 적극성","자기 이해","강점 발견","흥미·적성 검사 참여","직업 세계 이해","직업 가치관 형성"]],
+    ["진로 체험", ["직업인 특강 참여","현장 견학·체험","산업체 현장실습","현장·실무 관심","진로 상담 참여"]],
+    ["진로 준비", ["진로 목표 구체화","진로 계획 수립","자격증 취득 노력","이력서·자기소개서 작성","모의 면접 참여","포트폴리오 준비","정보 수집·활용","끈기 있는 준비"]]
+  ],
+  "행동특성 및 종합의견": [
+    ["인성", ["성실성","책임감","배려심","정직함","예의 바름","겸손함","감사하는 태도"]],
+    ["학습·성장", ["학습 의지","성장 가능성","끈기","집중력","꼼꼼함","탐구심","도전 정신"]],
+    ["대인관계", ["원만한 대인관계","협동심","리더십","공감 능력","유머 감각","경청하는 자세"]],
+    ["생활 태도", ["긍정적 태도","자기관리","시간 관리","규칙 준수","정리정돈","감정 조절"]]
+  ]
 };
+
+/* 선생님 어조 — 선생님마다 다른 어조를 쓰면 학급 간 문구가 자연스럽게 달라짐 */
+const VOICES = [
+  { id:"auto", name:"자동", short:"버전마다 다른 어조",
+    desc:"버전마다 아래 여섯 어조를 서로 다르게 배정합니다. 내게 맞는 어조를 찾을 때 비교용으로 좋습니다.", ex:"", endings:[] },
+  { id:"plain", name:"담백한 관찰형", short:"사실·행동을 차분하게",
+    desc:"교사가 관찰한 행동과 사실을 담담하게 기록하는 문체. 수식어와 감탄을 최소화하고, 무엇을 했는지와 어떤 태도를 보였는지를 차분하게 서술함.",
+    ex:"학급 환경부장을 맡아 청소 구역을 배정하고 매일 점검표를 확인함. 맡은 일을 미루지 않고 끝까지 수행함.",
+    endings:["~함.","~하였음.","~을 보임."] },
+  { id:"warm", name:"따뜻한 격려형", short:"노력·변화를 인정",
+    desc:"학생의 노력과 작은 변화도 인정해 주는 따뜻한 문체. 긍정적 어휘를 쓰되 과장하지 않고, 앞으로의 성장을 기대하는 시선을 담음.",
+    ex:"매일 청소 구역을 꼼꼼히 살피는 모습이 돋보임. 작은 일도 정성껏 해내는 태도가 앞으로 더욱 빛날 것으로 기대됨.",
+    endings:["~이 돋보임.","~을 보여 줌.","~이 기대됨."] },
+  { id:"growth", name:"성장 서사형", short:"처음 → 과정 → 변화",
+    desc:"처음의 모습에서 활동 과정을 거쳐 달라진 모습까지 시간의 흐름이 드러나게 서술하는 문체. '처음에는 … 점차 … 이후 …'처럼 변화의 흐름을 살림.",
+    ex:"처음에는 맡은 역할을 어려워하였으나 점차 점검 방법을 스스로 정리하며 자신감을 키움. 학기 말에는 친구들에게 역할을 안내할 만큼 성장함.",
+    endings:["~하게 됨.","~으로 발전함.","~을 키움."] },
+  { id:"competency", name:"역량 분석형", short:"역량 + 행동 근거",
+    desc:"드러난 역량을 중심축으로 삼고, 그 역량을 뒷받침하는 구체적 행동을 근거로 제시하는 분석적 문체. 판단에는 반드시 관찰 근거를 붙임.",
+    ex:"청소 구역 배정과 점검을 체계적으로 운영하여 계획·실행 역량을 발휘함. 점검표를 만들어 누락을 줄인 점에서 문제 해결력을 갖춤.",
+    endings:["~을 발휘함.","~을 갖춤.","~이 뛰어남."] },
+  { id:"scene", name:"장면 묘사형", short:"인상적인 한 장면",
+    desc:"인상적인 활동 장면 한두 개를 구체적으로 그려 보이듯 서술하고, 그 장면에서 학생의 특성을 끌어내는 문체. 장면은 반드시 제공된 사실 안에서만 고를 것.",
+    ex:"교실 바닥이 젖자 먼저 걸레를 들고 친구들과 정리하는 모습을 보임. 공동체를 먼저 생각하는 마음이 인상적임.",
+    endings:["~하는 모습을 보임.","~이 인상적임.","~하였음."] },
+  { id:"brief", name:"간결 핵심형", short:"짧은 문장으로 핵심만",
+    desc:"짧고 명료한 문장 여러 개로 핵심 특성을 빠르게 전달하는 문체. 한 문장에 한 가지 내용만 담고, 접속어를 줄임.",
+    ex:"학급 환경부장으로 청소 구역을 배정함. 매일 점검표를 확인함. 맡은 일을 끝까지 책임짐.",
+    endings:["~함.","~임.","~을 지님."] }
+];
+
+/* 버전마다 무작위로 배정되는 전개 방식 */
+const STRUCTURES = [
+  "구체적인 활동 장면으로 첫 문장을 시작함",
+  "학생이 맡은 역할이나 위치를 먼저 밝히며 시작함",
+  "학생의 핵심 특성을 한 문장으로 먼저 제시한 뒤 근거가 되는 활동을 이어 감",
+  "활동에 참여하게 된 계기나 과제로 시작함",
+  "처음 모습과 이후 변화를 대비시키며 전개함",
+  "학생의 행동이 친구나 학급에 준 영향을 중심으로 전개함",
+  "어려움이나 과제를 해결해 나간 과정을 중심으로 전개함",
+  "학기 초 → 학기 중 → 학기 말의 시간 순서로 전개함",
+  "서로 다른 두 활동을 엮어 공통으로 드러난 특성을 이끌어 냄",
+  "관찰된 구체적 행동을 먼저 제시하고 그 의미를 해석하며 마무리함"
+];
+
+/* 생기부에서 지나치게 자주 쓰이는 상투 표현 */
+const CLICHES = ["적극적으로 참여함","성실한 태도로","모범을 보임","타의 모범","귀감이 됨","책임감 있게 수행함","밝은 성격으로","매사에 성실함","원만한 교우 관계","솔선수범하는 모습을 보임"];
 const PROVIDERS={
   gemini:{ label:"Gemini", name:"Google AI Studio", url:"https://aistudio.google.com", keyHint:"AIza…", placeholder:"AIza... 키 붙여넣기",
     models:[
@@ -440,16 +551,17 @@ function friendlyError(status, raw){
   return "오류가 발생했습니다 (HTTP "+status+"). 잠시 후 다시 시도해 주세요.";
 }
 
-async function callLLM(prompt, maxTokens){
+async function callLLM(prompt, maxTokens, temp, topP){
+  const T=(typeof temp==="number")?temp:0.9, P=(typeof topP==="number")?topP:0.95;
   const model=getModel();
   let url, opts;
   if(state.provider==="groq"){
     url="https://api.groq.com/openai/v1/chat/completions";
     opts={method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},
-      body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}],temperature:0.9,max_tokens:maxTokens||1024})};
+      body:JSON.stringify({model:model,messages:[{role:"user",content:prompt}],temperature:T,top_p:P,max_tokens:maxTokens||1024})};
   } else {
     url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(apiKey);
-    const gconf={temperature:0.9,maxOutputTokens:maxTokens||1024};
+    const gconf={temperature:T,topP:P,maxOutputTokens:maxTokens||1024};
     if(/2\.5-flash/.test(model)) gconf.thinkingConfig={thinkingBudget:0}; // 사고 토큰으로 잘리는 현상 방지(2.5-flash 계열)
     opts={method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gconf})};
@@ -497,19 +609,39 @@ Object.keys(CATEGORIES).forEach(cat=>{
     [...segEl.children].forEach(c=>c.setAttribute("aria-pressed",c.title===cat)); renderChips(); renderClub(); renderSem(); };
   segEl.appendChild(b);
 });
-function activeKeywords(){
-  if(state.category==="진로활동") return SEMESTER_KEYWORDS[state.semester]||[];
-  return CATEGORIES[state.category];
+function activeGroups(){
+  const g=CATEGORIES[state.category]||[];
+  if(state.category==="진로활동")
+    return [["NCS 직업기초능력 ("+state.semester+")", SEMESTER_KEYWORDS[state.semester]||[], true], ...g];
+  return g;
+}
+function activeKeywords(){ return activeGroups().flatMap(g=>g[1]); }
+function updateKwCount(){
+  const n=state.selected.size;
+  $("kwCount").textContent="2~3개 선택 권장 · 선택 "+n+"개";
+  $("kwCount").style.color = n>4 ? "var(--seal)" : "";
+}
+function makeChip(kw){
+  const c=document.createElement("button");
+  c.className="chip"; c.type="button"; c.setAttribute("aria-pressed",state.selected.has(kw));
+  c.innerHTML='<svg class="tick" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="#2E5266" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
+  c.querySelector("span").textContent=kw;
+  c.onclick=()=>{ state.selected.has(kw)?state.selected.delete(kw):state.selected.add(kw); c.setAttribute("aria-pressed",state.selected.has(kw)); updateKwCount(); };
+  return c;
 }
 function renderChips(){
   chipsEl.innerHTML="";
-  [...activeKeywords(),...state.custom].forEach(kw=>{
-    const c=document.createElement("button");
-    c.className="chip"; c.setAttribute("aria-pressed",state.selected.has(kw));
-    c.innerHTML='<svg class="tick" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="#2E5266" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+kw+'</span>';
-    c.onclick=()=>{ state.selected.has(kw)?state.selected.delete(kw):state.selected.add(kw); c.setAttribute("aria-pressed",state.selected.has(kw)); };
-    chipsEl.appendChild(c);
+  const groups=activeGroups().slice();
+  if(state.custom.length) groups.push(["직접 추가", state.custom]);
+  groups.forEach(([label,list,isNcs])=>{
+    const box=document.createElement("div"); box.className="kgroup";
+    const lb=document.createElement("div"); lb.className="klabel";
+    if(isNcs){ lb.innerHTML='<span class="ncs"></span>'; lb.firstChild.textContent=label; } else lb.textContent=label;
+    const wrap=document.createElement("div"); wrap.className="chips";
+    list.forEach(kw=>wrap.appendChild(makeChip(kw)));
+    box.appendChild(lb); box.appendChild(wrap); chipsEl.appendChild(box);
   });
+  updateKwCount();
 }
 renderChips();
 function renderClub(){
@@ -552,7 +684,7 @@ $("lenPlus").onclick=()=>lenInput.value=Math.min(1500,(+lenInput.value||250)+50)
 $("cntMinus").onclick=()=>cntInput.value=Math.max(1,(+cntInput.value||2)-1);
 $("cntPlus").onclick=()=>cntInput.value=Math.min(5,(+cntInput.value||2)+1);
 
-const clean=t=>t.replace(/^["'\u201C\u201D]+|["'\u201C\u201D]+$/g,"").replace(/\*+/g,"").replace(/(^|\s)#+/g,"$1").replace(/\s+/g," ").trim();
+const clean=t=>(t||"").replace(/===\s*버전\s*\d+\s*===/g," ").replace(/^["'\u201C\u201D]+|["'\u201C\u201D]+$/g,"").replace(/\*+/g,"").replace(/(^|\s)#+/g,"$1").replace(/\s+/g," ").trim();
 const foreignCount=t=>((t||"").match(/[\u3400-\u9FFF\uF900-\uFAFF\u4E00-\u9FFF]|[A-Za-z]/g)||[]).length;
 const plainStyleCount=t=>{ let n=((t||"").match(/다\s*\./g)||[]).length; if(/다\s*$/.test((t||"").trim())) n++; return n; };
 function buildPolish(target,text){
@@ -560,66 +692,228 @@ function buildPolish(target,text){
   "규칙: (1) 한자·중국어·영어 등 모든 외국어를 자연스러운 한국어(한글)로 바꿀 것. (2) 모든 문장을 명사형(음슴체: '~함.', '~임.', '~을 보임.', '~하였음.')으로 종결하고, 평어체·구어체('~했다','~보였다','~한다','~이다','~였다')를 절대 쓰지 말 것. (3) 의미는 그대로 유지, 줄바꿈 없는 서술형 한 문단, 공백 포함 "+target+"자 이내. 머리말·따옴표 없이 문구만 출력.\n\n[원문]\n"+text;
 }
 let genCounter=0;          // 누적 버전 번호
-const allTexts=[];          // 지금까지 생성된 모든 문구(차별화·번호용)
+const allTexts=[];          // 이번 화면에서 생성된 문구
 
-function buildPrompt(target,prev,seq){
-  const lo=Math.round(target*0.85);
-  const TONES=["담담하고 객관적인 톤","따뜻하고 격려하는 톤","성장과 변화 과정에 초점을 둔 톤","구체적 사실 위주의 간결한 톤","잠재력과 가능성을 부각하는 톤"];
-  const tone=TONES[((seq%TONES.length)+TONES.length)%TONES.length];
-  const base=[...state.selected];
-  const r=base.length?seq%base.length:0;
-  const kws=base.slice(r).concat(base.slice(0,r));   // 버전마다 키워드 순서 회전
+/* ===================== 선생님 어조 ===================== */
+state.voice="auto";
+try{ const v=localStorage.getItem("sgb_voice"); if(v && VOICES.some(x=>x.id===v)) state.voice=v; }catch(e){}
+function voiceById(id){ return VOICES.find(v=>v.id===id)||VOICES[0]; }
+function renderVoices(){
+  const seg=$("voiceSeg"); seg.innerHTML="";
+  VOICES.forEach(v=>{
+    const b=document.createElement("button"); b.type="button";
+    b.setAttribute("aria-pressed", state.voice===v.id);
+    b.appendChild(document.createTextNode(v.name));
+    const s=document.createElement("small"); s.textContent=v.short; b.appendChild(s);
+    b.onclick=()=>{ state.voice=v.id; try{ localStorage.setItem("sgb_voice",v.id); }catch(e){} renderVoices(); };
+    seg.appendChild(b);
+  });
+  const v=voiceById(state.voice), d=$("voiceDesc");
+  d.textContent=v.desc;
+  if(v.ex){ const ex=document.createElement("span"); ex.className="ex"; ex.textContent="예) "+v.ex; d.appendChild(ex); }
+}
+renderVoices();
+
+/* ===================== 표현 다양성 (temperature · topP) ===================== */
+const DIVERSITY={
+  "안정":{t:0.7, p:0.90, cap:"표현이 무난하고 일정함"},
+  "보통":{t:1.0, p:0.95, cap:"권장 · 균형"},
+  "다양":{t:1.3, p:0.98, cap:"표현이 다채로움 · 검토 더 꼼꼼히"}
+};
+state.div="보통";
+try{ const d=localStorage.getItem("sgb_div"); if(d && DIVERSITY[d]) state.div=d; }catch(e){}
+function renderDiv(){
+  const seg=$("divSeg"); seg.innerHTML="";
+  Object.keys(DIVERSITY).forEach(k=>{
+    const b=document.createElement("button"); b.type="button"; b.textContent=k;
+    b.setAttribute("aria-pressed", state.div===k);
+    b.title="온도 "+DIVERSITY[k].t+" · topP "+DIVERSITY[k].p;
+    b.onclick=()=>{ state.div=k; try{ localStorage.setItem("sgb_div",k); }catch(e){} renderDiv(); };
+    seg.appendChild(b);
+  });
+  $("divCap").textContent=DIVERSITY[state.div].cap;
+}
+renderDiv();
+
+/* ===================== 생성 기록 (반복 표현 회피용) ===================== */
+const HIST_KEY="sgb_hist", HIST_MAX=80;
+function loadHist(){ try{ const h=JSON.parse(localStorage.getItem(HIST_KEY)||"[]"); return Array.isArray(h)?h:[]; }catch(e){ return []; } }
+function saveHist(h){ try{ localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(-HIST_MAX))); }catch(e){} }
+function pushHist(cat,text){ const h=loadHist(); h.push({c:cat,t:text}); saveHist(h); updateHistN(); }
+function updateHistN(){ $("histN").textContent=loadHist().length; }
+$("histClear").onclick=()=>{ if(confirm("반복 표현을 피하려고 기억해 둔 생성 기록을 지울까요?")){ saveHist([]); updateHistN(); } };
+updateHistN();
+
+/* 최근 문구에서 여러 번 쓰인 두 어절 표현 추출 */
+function frequentPhrases(texts,limit){
+  if(texts.length<3) return [];
+  const cnt=new Map();
+  for(const t of texts){
+    const w=t.replace(/[.,·"'()~]/g," ").split(/\s+/).filter(x=>x.length>=2);
+    const seen=new Set();
+    for(let i=0;i<w.length-1;i++){ const bg=w[i]+" "+w[i+1]; if(!seen.has(bg)){ seen.add(bg); cnt.set(bg,(cnt.get(bg)||0)+1); } }
+  }
+  const min=texts.length>=12?3:2;
+  return [...cnt].filter(([,v])=>v>=min).sort((a,b)=>b[1]-a[1]).slice(0,limit||15).map(x=>x[0]);
+}
+function firstSentence(t){ const s=(t||"").split(/[.。]/)[0].trim(); return s.length>34? s.slice(0,34)+"…" : s; }
+
+/* 글자 3개 묶음 기준 유사도(0~1) */
+function trigrams(s){ s=(s||"").replace(/\s+/g,""); const S=new Set(); for(let i=0;i<s.length-2;i++) S.add(s.slice(i,i+3)); return S; }
+function similarity(a,b){
+  const A=trigrams(a), B=trigrams(b); if(!A.size||!B.size) return 0;
+  let inter=0; for(const x of A) if(B.has(x)) inter++;
+  return inter/(A.size+B.size-inter);
+}
+const SIM_WARN=0.33;
+
+/* ===================== 버전별 지시 만들기 ===================== */
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+let lastStructs=[];
+function makeSpecs(count, excludeStruct){
+  let pool=shuffle(STRUCTURES.filter(s=>!lastStructs.includes(s) && s!==excludeStruct));
+  if(pool.length<count) pool=pool.concat(shuffle(STRUCTURES.filter(s=>!pool.includes(s) && s!==excludeStruct)));
+  const realVoices=VOICES.filter(v=>v.id!=="auto");
+  const vlist = state.voice==="auto" ? shuffle(realVoices) : null;
+  const kws=shuffle([...state.selected]);
+  const specs=[];
+  for(let i=0;i<count;i++){
+    specs.push({
+      struct: pool[i%pool.length],
+      voice: vlist ? vlist[i%vlist.length] : voiceById(state.voice),
+      focus: kws.length>1 ? kws[i%kws.length] : ""
+    });
+  }
+  lastStructs=specs.map(s=>s.struct);
+  return specs;
+}
+
+function buildBatchPrompt(target,specs,extraAvoid){
+  const lo=Math.round(target*0.85), n=specs.length;
+  const kws=[...state.selected];
   const specifics=$("specifics").value.trim();
+  const hist=loadHist().filter(h=>h.c===state.category).map(h=>h.t);
+  const recent=hist.slice(-30);
+  const freq=frequentPhrases(recent,15);
+  const openings=[...new Set(recent.slice(-8).map(firstSentence).filter(Boolean))];
+
   let p=
-"당신은 한국 학교생활기록부(생기부) 기재 전문가입니다. 아래 정보로 '"+state.category+"' 항목에 들어갈 문구를 작성하세요.\n\n"+
+"당신은 한국 학교생활기록부(생기부) 기재 전문가입니다. 아래 정보로 '"+state.category+"' 항목에 들어갈 문구를 서로 다른 "+n+"개 버전으로 작성하세요.\n\n"+
 "[선택된 특성·키워드]\n"+kws.map(k=>"- "+k).join("\n")+"\n\n"+
-"[교사가 입력한 구체적 사실·활동]\n"+(specifics||"(제공되지 않음)")+"\n\n"+
-((state.category==="동아리활동"&&state.club)?("[소속 동아리]\n'"+state.club+"' 활동임. 이 동아리의 활동 성격(무엇을 하는 동아리인지)과 위 선택된 특성·키워드를 자연스럽고 조화롭게 결합해 서술할 것. 동아리명을 문장 속에 자연스럽게 녹이되, '"+state.club+" 활동에서'처럼 동아리명으로 문장을 시작하지 말 것. 매번 다른 방식으로 시작하고, 활동 내용 없이 이름만 나열하지 말 것.\n\n"):"")+
-((state.category==="진로활동")?("[직업기초능력]\n위 키워드는 NCS 직업기초능력 항목임("+state.semester+" 교과). 각 능력을 진로·직업 역량 개발 관점에서, 실제 활동·태도 속에서 그 능력이 길러지고 발휘된 모습으로 구체적으로 서술할 것. 능력 이름만 단순 나열하지 말고, 능력의 의미가 드러나는 활동으로 풀어 쓸 것.\n\n"):"")+
-"[작성 규칙 — 반드시 모두 지킬 것]\n"+
-"1) 분량: 공백 포함 최대 "+target+"자 이내. 이 글자수를 절대 초과하지 말 것. "+target+"자에 최대한 가깝게(최소 "+lo+"자 이상) 쓰되, 넘기느니 약간 모자란 편이 나음. 한두 문장으로 짧게 끝내지 말 것.\n"+
-"2) 내용: 선택된 특성과 사실을 바탕으로 '구체적인 활동 → 그 과정에서 보인 태도·역량 → 결과나 성장'이 드러나도록 여러 문장으로 풍부하게 서술. 키워드를 단순 나열하지 말고 맥락 있는 문장으로 자연스럽게 녹일 것.\n"+
-"3) 문체: 모든 문장을 반드시 명사형(음슴체)으로 종결할 것. 허용 종결: '~함.', '~임.', '~을 보임.', '~하였음.', '~을 기름.', '~이 돋보임.' 등. 평어체·구어체 종결('~했다', '~보였다', '~한다', '~이다', '~된다', '~였다', '~이었다')은 절대 사용 금지. 줄바꿈 없는 서술형 한 문단.\n"+
-"4) 금지: 학생 이름·성별 표기, 추측·과장, 제공되지 않은 사실의 창작, 개조식 나열, 별표(*)·굵게(**)·해시(#) 등 마크다운 강조 기호 사용.\n"+
-"5) 언어: 반드시 한국어(한글)로만 작성. 한자(漢字)·중국어·영어·기타 외국어 단어를 절대 섞지 말 것. 모든 단어를 한글로 표기(예: '部'가 아니라 '부', 'team'이 아니라 '팀'). 외래어도 한글로 표기.\n"+
-"6) 출력: 머리말·설명·따옴표 없이 완성된 문구만 출력.";
-  if(kws.length>1){
-    p+="\n\n[이번 버전의 강조축]\n특히 '"+kws[0]+"'을(를) 문장의 가장 앞·중심축으로 부각하여 서술하고, 나머지 특성은 그 뒤에 자연스럽게 엮으세요. 위에 제시된 키워드 순서를 따라 서술의 전개 순서를 잡으세요.";
-  }
-  p+="\n\n[이번 버전의 톤]\n전체적으로 "+tone+"으로 서술하세요. 단, 명사형(음슴체) 종결과 사실 기반 원칙, 글자수 상한은 그대로 지킵니다.";
-  if(prev&&prev.length){
-    p+="\n\n[중요 — 차별화]\n이미 작성된 아래 버전들과 문장 구성·표현·시작 문장·강조점이 확연히 다르게, 새로운 문장으로 작성하세요. 같은 사실은 유지하되 표현·문장 순서·강조점을 바꿀 것.\n"+
-       prev.map((t,i)=>"("+(i+1)+") "+t).join("\n");
-  }
+"[교사가 입력한 구체적 사실·활동]\n"+(specifics||"(제공되지 않음 — 특정 사건을 지어내지 말고, 키워드가 드러나는 일반적인 학교생활 맥락으로만 서술)")+"\n\n"+
+((state.category==="동아리활동"&&state.club)?("[소속 동아리]\n'"+state.club+"' 활동임. 이 동아리의 활동 성격과 선택된 특성을 자연스럽게 결합할 것. 동아리명으로 문장을 시작하지 말고 문장 속에 자연스럽게 녹일 것.\n\n"):"")+
+((state.category==="진로활동" && kws.some(k=>(SEMESTER_KEYWORDS[state.semester]||[]).includes(k)))?("[직업기초능력]\n키워드 중 NCS 직업기초능력 항목("+state.semester+")은 능력 이름만 나열하지 말고, 실제 활동·태도 속에서 그 능력이 길러지고 발휘된 모습으로 풀어 쓸 것.\n\n"):"")+
+"[모든 버전 공통 규칙]\n"+
+"1) 분량: 각 버전 공백 포함 최대 "+target+"자, 최소 "+lo+"자. 상한을 넘기지 말 것.\n"+
+"2) 내용: 구체적인 활동 → 그 과정의 태도·역량 → 결과나 성장이 드러나게 여러 문장으로 서술. 키워드를 나열하지 말고 맥락 있는 문장에 녹일 것.\n"+
+"3) 문체: 모든 문장을 명사형(음슴체)으로 종결('~함.', '~임.', '~을 보임.' 등). '~했다', '~보였다', '~한다', '~이다', '~였다' 같은 평어체 종결 금지. 줄바꿈 없는 한 문단.\n"+
+"4) 금지: 학생 이름·성별, 추측·과장, 제공되지 않은 구체적 사건·수치·수상의 창작, 개조식, 마크다운 기호(*, **, #).\n"+
+"5) 언어: 한국어(한글)로만. 한자·영어 등 외국어 금지, 외래어도 한글 표기.\n"+
+"6) 상투 표현 금지: 다음 표현은 생기부에서 지나치게 흔하므로 쓰지 말고 구체적인 다른 말로 바꿀 것 → "+CLICHES.map(c=>"'"+c+"'").join(", ")+"\n"+
+"7) 같은 끝맺음을 두 문장 연속으로 쓰지 말 것. 문장 길이도 길고 짧게 섞을 것.\n";
+  if(freq.length) p+="\n[최근 이 항목에서 자주 쓰인 표현 — 이번에는 쓰지 말 것]\n"+freq.map(f=>"'"+f+"'").join(", ")+"\n";
+  if(openings.length) p+="\n[최근 문구의 첫 문장 — 이와 비슷하게 시작하지 말 것]\n"+openings.map(o=>"- "+o).join("\n")+"\n";
+  if(extraAvoid && extraAvoid.length) p+="\n[다음 문구와 표현·구성·첫 문장이 확연히 달라야 함]\n"+extraAvoid.map((t,i)=>"("+(i+1)+") "+t).join("\n")+"\n";
+
+  p+="\n[버전별 지시 — 각 버전에 배정된 어조와 전개 방식을 반드시 따를 것]\n";
+  specs.forEach((s,i)=>{
+    p+="버전 "+(i+1)+"\n"+
+       "· 어조: "+s.voice.name+" — "+s.voice.desc+"\n"+
+       "· 전개 방식: "+s.struct+" (제공된 사실과 맞지 않는 부분은 지어내지 말고 방식만 참고)\n"+
+       (s.focus? "· 중심 키워드: '"+s.focus+"'을(를) 가장 비중 있게 다룰 것\n" : "")+
+       (s.voice.endings.length? "· 끝맺음: "+s.voice.endings.map(e=>"'"+e+"'").join(", ")+" 등을 중심으로 다양하게\n" : "");
+  });
+  if(n>1) p+="\n[버전 간 차별화]\n버전끼리 첫 단어, 첫 문장 구조, 핵심 어휘, 문장 끝맺음이 겹치지 않게 할 것. 같은 사실이라도 표현과 순서를 완전히 바꿀 것.\n";
+  p+="\n[출력 형식 — 정확히 지킬 것. 다른 설명 금지]\n";
+  for(let i=1;i<=n;i++) p+="=== 버전 "+i+" ===\n(문구)\n";
   return p;
 }
+
+function parseVersions(raw,n){
+  const out=[]; const re=/===\s*버전\s*(\d+)\s*===\s*([\s\S]*?)(?====\s*버전\s*\d+\s*===|$)/g;
+  let m; while((m=re.exec(raw))!==null){ const t=m[2].trim(); if(t) out.push(t); }
+  if(!out.length && n===1 && raw.trim()) out.push(raw.trim());
+  return out.slice(0,n);
+}
+
 function buildExpand(target,textToGrow){
   const kws=[...state.selected]; const specifics=$("specifics").value.trim();
-  return "다음은 '"+state.category+"' 항목 생기부 문구 초안인데 분량이 너무 짧습니다. 같은 사실과 특성을 유지하면서 공백 포함 "+target+"자를 넘지 않는 선에서 그 글자수에 가깝게 더 구체적이고 풍부하게 늘려 다시 작성하세요. 활동의 과정·태도·성장을 문장으로 더 풀어쓰되, 제공되지 않은 사실을 지어내지 말고, "+target+"자를 절대 초과하지 말며, 명사형(음슴체) 종결과 줄바꿈 없는 서술형 한 문단을 유지하세요. 머리말·따옴표 없이 문구만 출력.\n\n[늘릴 초안]\n"+textToGrow+"\n\n[참고 — 선택된 특성]\n"+kws.join(", ")+(specifics?("\n[참고 — 구체적 사실]\n"+specifics):"");
+  return "다음은 '"+state.category+"' 항목 생기부 문구 초안인데 분량이 너무 짧습니다. 같은 사실·어조·특성을 유지하면서 공백 포함 "+target+"자를 넘지 않는 선에서 그 글자수에 가깝게 더 구체적으로 늘려 다시 작성하세요. 제공되지 않은 사실을 지어내지 말고, 명사형(음슴체) 종결과 줄바꿈 없는 한 문단을 유지하세요. 머리말·따옴표 없이 문구만 출력.\n\n[늘릴 초안]\n"+textToGrow+"\n\n[참고 — 선택된 특성]\n"+kws.join(", ")+(specifics?("\n[참고 — 구체적 사실]\n"+specifics):"");
 }
-function makeCard(ver,target){
+
+/* 짧으면 늘리고, 외국어·평어체가 섞이면 다듬기 (필요할 때만 추가 호출) */
+async function postFix(text,target){
+  const maxTok=Math.min(3072, Math.round(target*4)+1000);
+  if([...text].length < target*0.55){
+    try{ const longer=clean(await callLLM(buildExpand(target,text),maxTok)); if([...longer].length>[...text].length) text=longer; }catch(_){ }
+  }
+  if(foreignCount(text)>0 || plainStyleCount(text)>0){
+    try{
+      const fx=clean(await callLLM(buildPolish(target,text),maxTok));
+      if(fx && foreignCount(fx)<=foreignCount(text) && plainStyleCount(fx)<=plainStyleCount(text)
+         && (foreignCount(fx)<foreignCount(text) || plainStyleCount(fx)<plainStyleCount(text))) text=fx;
+    }catch(_){ }
+  }
+  return text;
+}
+
+/* 버전 n개를 한 번의 호출로 생성 → 모자란 버전만 개별 보충 */
+async function genBatch(target,specs,extraAvoid){
+  const n=specs.length;
+  const maxTok=Math.min(8192, n*(Math.round(target*4)+300)+600);
+  const D=DIVERSITY[state.div]||DIVERSITY["보통"];
+  const raw=await callLLM(buildBatchPrompt(target,specs,extraAvoid),maxTok,D.t,D.p);
+  const parts=parseVersions(raw,n).map(clean);
+  for(let i=parts.length;i<n;i++){
+    const one=await callLLM(buildBatchPrompt(target,[specs[i]],(extraAvoid||[]).concat(parts)),Math.min(3072,Math.round(target*4)+900),D.t,D.p);
+    parts.push(clean(parseVersions(one,1)[0]||one));
+  }
+  return parts;
+}
+
+/* ===================== 결과 카드 ===================== */
+function makeCard(ver,target,spec){
   const card=document.createElement("div");
   card.className="out";
-  card.innerHTML=
-    '<div class="olabel">'+state.category+' · 버전 '+ver+'</div>'+
+  const lab=document.createElement("div"); lab.className="olabel";
+  lab.textContent=state.category+" · 버전 "+ver+(spec?" · "+spec.voice.name:"");
+  card.appendChild(lab);
+  card.insertAdjacentHTML("beforeend",
     '<div class="otext"><div class="loading"><span class="spin"></span>문구를 작성하고 있습니다…</div></div>'+
     '<div class="oseal" style="display:none">검토<br>요망</div>'+
     '<div class="ofoot"><span class="count">글자수 <b class="cn">0</b> / 목표 <b>'+target+'</b></span>'+
-    '<span class="spacer"></span><button class="obtn copy">복사</button></div>';
+    '<span class="simBadge"></span>'+
+    '<span class="spacer"></span><button class="obtn redo" type="button" style="display:none">다시 쓰기</button><button class="obtn copy" type="button">복사</button></div>');
   return card;
 }
-function fillCard(card,text,target){
-  card.querySelector(".otext").textContent=text;
+function setLoading(card){
+  const o=card.querySelector(".otext"); o.style.color=""; o.style.fontSize="";
+  o.innerHTML='<div class="loading"><span class="spin"></span>다른 표현으로 다시 쓰고 있습니다…</div>';
+  card.querySelector(".oseal").style.display="none";
+  card.querySelector(".ofoot").style.display="flex";
+}
+function fillCard(card,text,target,sim){
+  const o=card.querySelector(".otext"); o.style.color=""; o.style.fontSize=""; o.textContent=text;
   const len=[...text].length;
   const cn=card.querySelector(".cn");
   cn.textContent=len;
-  if(target && len>target){ cn.style.color="#B23A2E"; cn.title="목표 글자수 초과"; }
+  if(target && len>target){ cn.style.color="#B23A2E"; cn.title="목표 글자수 초과"; } else { cn.style.color=""; cn.title=""; }
   card.querySelector(".oseal").style.display="grid";
+  const badge=card.querySelector(".simBadge");
+  if(typeof sim==="number"){
+    const pct=Math.round(sim*100);
+    badge.className="simBadge show"+(sim<SIM_WARN?" ok":"");
+    badge.textContent= sim<SIM_WARN ? "기존 문구와 겹침 적음" : "비슷한 문구 있음 ("+pct+"%)";
+    badge.title="최근 생성한 같은 항목 문구와 가장 비슷한 정도: "+pct+"%";
+  }
+  card.dataset.text=text;
   card.querySelector(".copy").onclick=async()=>{
-    try{ await navigator.clipboard.writeText(text); }
-    catch(e){ const t=document.createElement("textarea");t.value=text;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove(); }
+    try{ await navigator.clipboard.writeText(card.dataset.text); }
+    catch(e){ const t=document.createElement("textarea");t.value=card.dataset.text;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove(); }
     const toast=$("toast"); toast.classList.add("show"); setTimeout(()=>toast.classList.remove("show"),1600);
   };
+  const redo=card.querySelector(".redo"); redo.style.display="";
+  redo.onclick=()=>rewriteCard(card,target);
 }
 function cardError(card,err){
   const short=(err&&err.message)?err.message:String(err);
@@ -634,21 +928,32 @@ function cardError(card,err){
   }
   card.querySelector(".ofoot").style.display="none";
 }
-async function genOne(target,prev,seq){
-  const maxTok=Math.min(3072, Math.round(target*4)+1000);
-  let text=clean(await callLLM(buildPrompt(target,prev,seq),maxTok));
-  if([...text].length < target*0.55){
-    try{ const longer=clean(await callLLM(buildExpand(target,text),maxTok)); if([...longer].length>[...text].length) text=longer; }catch(_){ }
-  }
-  if(foreignCount(text)>0 || plainStyleCount(text)>0){
-    try{
-      const fx=clean(await callLLM(buildPolish(target,text),maxTok));
-      if(fx && foreignCount(fx)<=foreignCount(text) && plainStyleCount(fx)<=plainStyleCount(text)
-         && (foreignCount(fx)<foreignCount(text) || plainStyleCount(fx)<plainStyleCount(text))) text=fx;
-    }catch(_){ }
-  }
-  return text;
+
+/* 같은 항목의 최근 기록·이번 화면 문구와 비교해 가장 높은 유사도 */
+function maxSimilarity(text,exclude){
+  const pool=loadHist().filter(h=>h.c===state.category).map(h=>h.t).concat(allTexts);
+  let best=0;
+  for(const t of pool){ if(exclude&&exclude.includes(t)) continue; const s=similarity(text,t); if(s>best) best=s; }
+  return best;
 }
+
+async function rewriteCard(card,target){
+  if(!apiKey){ showErr("설정에서 API 키를 먼저 입력하세요."); return; }
+  const old=card.dataset.text||"";
+  const btn=card.querySelector(".redo"); btn.disabled=true;
+  setLoading(card);
+  try{
+    const spec=makeSpecs(1)[0];
+    const [t0]=await genBatch(target,[spec],[old]);
+    const text=await postFix(t0,target);
+    const sim=maxSimilarity(text,[old]);
+    pushHist(state.category,text); allTexts.push(text);
+    card.querySelector(".olabel").textContent=state.category+" · 다시 쓰기 · "+spec.voice.name;
+    fillCard(card,text,target,sim);
+  }catch(e){ cardError(card,e); }
+  finally{ btn.disabled=false; refreshStatus(); }
+}
+
 async function generate(){
   if(!apiKey){ showErr("설정에서 API 키를 먼저 입력하세요."); $("setPanel").classList.add("show"); return; }
   if(state.selected.size===0){ showErr("키워드를 하나 이상 선택해 주세요."); return; }
@@ -657,19 +962,29 @@ async function generate(){
   const count=Math.max(1,Math.min(5,+cntInput.value||2));
   $("genBtn").disabled=true;
   const wrap=$("outWrap"); $("outHead").style.display="flex";
-  // 기존 결과는 유지하고 아래에 이어서 추가
+  const specs=makeSpecs(count);
   const batch=[];
-  for(let i=0;i<count;i++){ genCounter++; const c=makeCard(genCounter,target); wrap.appendChild(c); batch.push({card:c,seq:genCounter-1}); }
+  specs.forEach(sp=>{ genCounter++; const c=makeCard(genCounter,target,sp); wrap.appendChild(c); batch.push({card:c,spec:sp}); });
   batch[0].card.scrollIntoView({behavior:"smooth",block:"nearest"});
-  const prev=allTexts.slice();   // 화면에 이미 있는 것들과도 다르게
-  for(const it of batch){
-    try{ const text=await genOne(target,prev,it.seq); prev.push(text); allTexts.push(text); fillCard(it.card,text,target); }
-    catch(e){ cardError(it.card, e); }
-  }
+  try{
+    const parts=await genBatch(target,specs);
+    for(let i=0;i<batch.length;i++){
+      try{
+        const text=await postFix(parts[i],target);
+        const sim=maxSimilarity(text);
+        allTexts.push(text); pushHist(state.category,text);
+        fillCard(batch[i].card,text,target,sim);
+      }catch(e){ cardError(batch[i].card,e); }
+    }
+  }catch(e){ batch.forEach(it=>cardError(it.card,e)); }
   $("genBtn").disabled=false; refreshStatus();
 }
 $("genBtn").onclick=generate;
 $("clearBtn").onclick=()=>{ $("outWrap").innerHTML=""; allTexts.length=0; genCounter=0; $("outHead").style.display="none"; };
+
+/* 구체적 사실 안내 */
+function updateSpecTip(){ $("specTip").style.display = $("specifics").value.trim() ? "none" : "block"; }
+$("specifics").addEventListener("input",updateSpecTip); updateSpecTip();
 function showErr(m){ const e=$("err"); e.textContent=m; e.style.display="block"; }
 function hideErr(){ $("err").style.display="none"; }
 
