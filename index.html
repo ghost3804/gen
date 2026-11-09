@@ -555,10 +555,13 @@ const CLICHES = ["적극적으로 참여함","성실한 태도로","모범을 �
 const PROVIDERS={
   gemini:{ label:"Gemini", name:"Google AI Studio", url:"https://aistudio.google.com", keyHint:"AIza…", placeholder:"AIza... 키 붙여넣기",
     models:[
-      ["gemini-2.5-flash","gemini-2.5-flash — 고품질 (권장)"],
-      ["gemini-2.5-flash-lite","gemini-2.5-flash-lite — 가볍고 빠름"],
-      ["gemini-2.5-pro","gemini-2.5-pro — 정교·느림"]
-    ] },
+      ["gemini-3.1-flash-lite","gemini-3.1-flash-lite — 가볍고 빠름 (기본)"],
+      ["gemini-3.5-flash","gemini-3.5-flash — 최신·고품질"],
+      ["gemini-2.5-flash","gemini-2.5-flash — 안정판"],
+      ["gemini-2.5-flash-lite","gemini-2.5-flash-lite — 가장 가벼움"]
+    ],
+    // 무료 등급에서 빠졌거나 종료된 모델: 저장돼 있으면 기본 모델로 되돌림
+    retired:/^gemini-(1\.|2\.0-|2\.5-pro|3(\.\d)?-pro)/ },
   groq:{ label:"Groq", name:"Groq Console", url:"https://console.groq.com/keys", keyHint:"gsk_…", placeholder:"gsk_... 키 붙여넣기",
     models:[
       ["llama-3.3-70b-versatile","llama-3.3-70b — 고품질·한국어 좋음 (권장)"],
@@ -617,6 +620,7 @@ function applyProviderUI(){
   $("keyInput").placeholder=p.placeholder;
   $("keyInput").value=apiKey;
   let savedModel=""; try{ savedModel=localStorage.getItem(PMODEL(state.provider))||""; }catch(e){}
+  if(savedModel && p.retired && p.retired.test(savedModel)){ savedModel=""; try{ localStorage.removeItem(PMODEL(state.provider)); }catch(e){} }
   renderModels(savedModel);
 }
 
@@ -673,7 +677,14 @@ async function callLLM(prompt, maxTokens, temp, topP){
   } else {
     url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(apiKey);
     const gconf={temperature:T,topP:P,maxOutputTokens:maxTokens||1024};
-    if(/2\.5-flash/.test(model)) gconf.thinkingConfig={thinkingBudget:0}; // 사고 토큰으로 잘리는 현상 방지(2.5-flash 계열)
+    if(/^gemini-2\.5-flash/.test(model)) gconf.thinkingConfig={thinkingBudget:0}; // 사고 토큰으로 잘리는 현상 방지(2.5-flash 계열)
+    else if(/^gemini-3/.test(model)){
+      // Gemini 3 계열: 구글 권장에 따라 온도는 1.0 미만으로 내리지 않고(차분함은 topP로 조절),
+      // 생각(thinking)은 최소로 줄여 응답 잘림·지연을 막음
+      gconf.temperature=Math.max(1.0,T);
+      gconf.thinkingConfig={thinkingLevel: /flash-lite|^gemini-3-flash/.test(model) ? "minimal" : "low"};
+      gconf.maxOutputTokens=(maxTokens||1024)+1024;
+    }
     opts={method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:gconf})};
   }
