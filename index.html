@@ -807,13 +807,45 @@ $("lenPlus").onclick=()=>lenInput.value=Math.min(1500,(+lenInput.value||250)+50)
 $("cntMinus").onclick=()=>cntInput.value=Math.max(1,(+cntInput.value||2)-1);
 $("cntPlus").onclick=()=>cntInput.value=Math.min(5,(+cntInput.value||2)+1);
 
-const clean=t=>(t||"").replace(/===\s*버전\s*\d+\s*===/g," ").replace(/^["'\u201C\u201D]+|["'\u201C\u201D]+$/g,"").replace(/\*+/g,"").replace(/(^|\s)#+/g,"$1").replace(/\s+/g," ").trim();
+const clean=t=>(t||"").replace(/===\s*버전\s*\d+\s*===/g," ").replace(/^["'\u201C\u201D]+|["'\u201C\u201D]+$/g,"").replace(/\*+/g,"").replace(/(^|\s)#+/g,"$1").replace(/\s+/g," ").replace(/\s*[\(\[]\s*(공백\s*포함\s*)?(약\s*)?\d+\s*자\s*[\)\]]\s*$/,"").trim();
 const foreignCount=t=>((t||"").match(/[\u3400-\u9FFF\uF900-\uFAFF\u4E00-\u9FFF]|[A-Za-z]/g)||[]).length;
 const plainStyleCount=t=>{ let n=((t||"").match(/다\s*\./g)||[]).length; if(/다\s*$/.test((t||"").trim())) n++; return n; };
 function buildPolish(target,text){
   return "다음 생기부 문구를 NEIS 기준에 맞게 다듬어 다시 작성하세요.\n"+
   "규칙: (1) 한자·중국어·영어 등 모든 외국어를 자연스러운 한국어(한글)로 바꿀 것. (2) 모든 문장을 명사형(음슴체: '~함.', '~임.', '~을 보임.', '~하였음.')으로 종결하고, 평어체·구어체('~했다','~보였다','~한다','~이다','~였다')를 절대 쓰지 말 것. (3) 의미는 그대로 유지, 줄바꿈 없는 서술형 한 문단, 공백 포함 "+target+"자 이내. 머리말·따옴표 없이 문구만 출력.\n\n[원문]\n"+text;
 }
+/* ===================== 글자 수 맞추기 ===================== */
+const charLen=t=>[...(t||"")].length;
+// AI는 글자 수를 잘 세지 못하므로 문장 수로 분량을 함께 알려 줌
+function sentHint(target){ const n=Math.max(2,Math.round(target/55)); return "약 "+n+"문장(한 문장은 40~60자)"; }
+function buildShorten(target,text,kind){
+  return "다음 "+(kind||"생기부 문구")+"는 공백 포함 "+charLen(text)+"자로 너무 깁니다. 공백 포함 "+Math.round(target*0.9)+"~"+target+"자로 줄여 다시 작성하세요.\n"+
+  "방법: 덜 중요한 수식어, 반복되는 내용, 부연 설명을 빼고 핵심 사실과 특성만 남길 것. 분량은 "+sentHint(target)+" 정도.\n"+
+  "유지: 사실관계, 문체와 문장 끝맺음 방식, 줄바꿈 없는 한 문단. 새로운 내용을 덧붙이지 말 것. 머리말·따옴표·글자 수 표시 없이 문구만 출력.\n\n[원문]\n"+text;
+}
+// 마지막 수단: 문장 단위로 잘라 상한 안에 맞춤 (문장 중간에서 자르지 않음)
+function trimToLimit(text,limit){
+  if(charLen(text)<=limit) return text;
+  const sents=((text||"").match(/[^.。!?]+[.。!?]+["'”’)\]]*/g)||[]).map(x=>x.trim()).filter(Boolean);
+  if(!sents.length) return text;
+  let out="";
+  for(const x of sents){ const cand=out?out+" "+x:x; if(charLen(cand)>limit) break; out=cand; }
+  return out || sents[0];
+}
+// 목표보다 길면: ① AI에게 한 번 줄이기 요청 → ② 그래도 길면 문장 단위로 잘라 냄
+async function fitLength(text,target,kind){
+  if(!text || !target) return text;
+  const ceil=Math.round(target*1.05);
+  if(charLen(text)>ceil){
+    try{
+      const sh=clean(await callLLM(buildShorten(target,text,kind),Math.min(3072,Math.round(target*3)+1200),0.7,0.9));
+      if(sh && charLen(sh)<charLen(text) && charLen(sh)>=target*0.5 && foreignCount(sh)<=foreignCount(text) && plainStyleCount(sh)<=plainStyleCount(text)) text=sh;
+    }catch(_){ }
+  }
+  if(charLen(text)>ceil) text=trimToLimit(text,ceil);
+  return text;
+}
+
 let genCounter=0;          // 누적 버전 번호
 const allTexts=[];          // 이번 화면에서 생성된 문구
 
@@ -933,7 +965,7 @@ function buildBatchPrompt(target,specs,extraAvoid){
 ((state.category==="동아리활동"&&state.club)?("[소속 동아리]\n'"+state.club+"' 활동임. 이 동아리의 활동 성격과 선택된 특성을 자연스럽게 결합할 것. 동아리명으로 문장을 시작하지 말고 문장 속에 자연스럽게 녹일 것.\n\n"):"")+
 ((state.category==="진로활동" && kws.some(k=>(SEMESTER_KEYWORDS[state.semester]||[]).includes(k)))?("[직업기초능력]\n키워드 중 NCS 직업기초능력 항목("+state.semester+")은 능력 이름만 나열하지 말고, 실제 활동·태도 속에서 그 능력이 길러지고 발휘된 모습으로 풀어 쓸 것.\n\n"):"")+
 "[모든 버전 공통 규칙]\n"+
-"1) 분량: 각 버전 공백 포함 최대 "+target+"자, 최소 "+lo+"자. 상한을 넘기지 말 것.\n"+
+"1) 분량: 각 버전 공백 포함 최대 "+target+"자, 최소 "+lo+"자 — "+sentHint(target)+". 상한을 절대 넘기지 말 것. 길게 쓰는 것보다 핵심만 담는 것이 더 중요함.\n"+
 "2) 내용: 구체적인 활동 → 그 과정의 태도·역량 → 결과나 성장이 드러나게 여러 문장으로 서술. 키워드를 나열하지 말고 맥락 있는 문장에 녹일 것.\n"+
 "3) 문체: 모든 문장을 명사형(음슴체)으로 종결('~함.', '~임.', '~을 보임.' 등). '~했다', '~보였다', '~한다', '~이다', '~였다' 같은 평어체 종결 금지. 줄바꿈 없는 한 문단.\n"+
 "4) 금지: 학생 이름·성별, 추측·과장, 제공되지 않은 구체적 사건·수치·수상의 창작, 개조식, 마크다운 기호(*, **, #).\n"+
@@ -983,6 +1015,7 @@ async function postFix(text,target){
          && (foreignCount(fx)<foreignCount(text) || plainStyleCount(fx)<plainStyleCount(text))) text=fx;
     }catch(_){ }
   }
+  text=await fitLength(text,target,"생기부 문구");
   return text;
 }
 
@@ -1256,7 +1289,7 @@ function cBuildPrompt(target,prev,seq){
 "[상담 교사가 입력한 구체적 정황·발언 요지]\n"+(specifics||"(제공되지 않음)")+"\n\n"+
 "[작성 규칙 — 반드시 모두 지킬 것]\n"+
 "1) 두 항목으로 나누어 작성. '상담내용'은 훈련생의 현재 상황, 발언 요지, 교사가 관찰한 태도·정서를 사실 중심으로 서술. '조치사항'은 교사가 취한 지도·안내·정보 제공·연계 및 향후 계획을 서술.\n"+
-"2) 분량: 상담내용은 공백 포함 "+target+"자 내외(최소 "+lo+"자 이상, 초과하지 말 것). 조치사항은 "+actLo+"~"+actHi+"자 정도로 더 짧게.\n"+
+"2) 분량: 상담내용은 공백 포함 최대 "+target+"자, 최소 "+lo+"자 — "+sentHint(target)+". 조치사항은 "+actLo+"~"+actHi+"자 정도로 더 짧게. 상한을 절대 넘기지 말 것.\n"+
 "3) 위 [훈련생 배경]의 고민·관심사는 내용의 결과 어조에만 은근히 반영할 것. 훈련생을 '중장년층','청년층','고령층','고등학생','고3' 등 연령·세대 집단으로 규정하거나 '~층으로서','~로서'와 같이 묶지 말고, 상황 자체를 직접 서술할 것. (잘못된 예: '중장년층으로서의 경력 단절' → 올바른 예: '오랜 경력 공백 이후의 재취업') 상담 유형('"+cstate.type+"')의 목적에 맞게 서술할 것.\n"+
 "4) 문체: "+CSTYLES[cstate.style]+"\n"+
 "5) 문장 흐름: 짧은 문장을 잘게 끊어 나열하지 말 것. 두세 문장 정도는 접속·연결 표현으로 자연스럽게 이어 하나의 흐름으로 읽히게 서술하되, 한 문장이 지나치게 길어지지는 않게 함. 줄바꿈 없는 서술형으로 각 항목을 작성.\n"+
@@ -1386,6 +1419,8 @@ async function cGenerate(){
   for(const it of batch){
     try{
       const parts=await cGenOne(target,prev,it.seq);
+      parts.content=await fitLength(parts.content,target,"상담일지의 상담내용");
+      if(parts.action) parts.action=await fitLength(parts.action,Math.round(target*0.7),"상담일지의 조치사항");
       const joined="상담내용: "+parts.content+" 조치사항: "+parts.action;
       prev.push(joined); cAllTexts.push(joined);
       cFillCard(it.card,parts.content,parts.action);
@@ -1475,7 +1510,7 @@ function satBuildPrompt(profiles,limit,avoidOpen,avoidTexts){
 "[공통 규칙 — 반드시 모두 지킬 것]\n"+
 "1) 이름을 쓰지 말 것. 지칭이 꼭 필요하면 '해당 훈련생'을 쓰되 문구당 한 번 이하로, 그리고 '해당 훈련생은'으로 문구를 시작하지 말 것.\n"+
 "2) 문체: 모든 문장을 명사형(음슴체)으로 종결('~함.', '~임.', '~을 보임.' 등). '~했다', '~한다', '~이다', '~였다' 같은 평어체 금지. 줄바꿈 없는 한 문단.\n"+
-"3) 분량: 각 문구 공백 포함 "+limit+"자 내외(±10%).\n"+
+"3) 분량: 각 문구 공백 포함 최대 "+limit+"자, 최소 "+Math.round(limit*0.85)+"자 — "+sentHint(limit)+". 상한을 절대 넘기지 말 것.\n"+
 "4) 금지: 추측·과장, 제공되지 않은 사실·수치·수상의 창작, 마크다운 기호, 한자·영어 등 외국어(외래어도 한글 표기).\n"+
 "5) 평가기준 문장을 그대로 옮겨 적지 말고, 그 기준이 드러나는 행동으로 바꿔 쓸 것.\n"+
 "6) 상투 표현 금지 → "+SAT_CLICHES.concat(CLICHES.slice(0,4)).map(c=>"'"+c+"'").join(", ")+"\n"+
@@ -1509,6 +1544,10 @@ function satParse(text,n){
 }
 /* 외국어·평어체가 섞인 경우에만 추가 호출로 다듬기 */
 async function satFix(text,limit){
+  text=await satPolish(text,limit);
+  return await fitLength(text,limit,"세특 문구");
+}
+async function satPolish(text,limit){
   if(foreignCount(text)>0 || plainStyleCount(text)>0){
     try{
       const fx=clean(await callLLM(buildPolish(limit,text),Math.min(3072,Math.round(limit*4)+800)));
@@ -1543,7 +1582,7 @@ function satSetRow(tb,idx,text,limit,profile,sim){
   const tr=tb.children[idx]; if(!tr) return;
   const len=[...text].length;
   const cell=tr.querySelector(".rt-text"); cell.textContent=text; cell.title=profile?("배정: "+profile.trait[0]+" · "+profile.voice.name):"";
-  const lenCell=tr.querySelector(".rt-len"); lenCell.textContent=len; lenCell.style.color=(limit&&len>limit*1.1)?"#B23A2E":"";
+  const lenCell=tr.querySelector(".rt-len"); lenCell.textContent=len; lenCell.style.color=(limit&&len>limit*1.05)?"#B23A2E":"";
   const simCell=tr.querySelector(".rt-sim");
   if(typeof sim==="number"){ const pct=Math.round(sim*100); simCell.textContent=pct+"%"; simCell.className="rt-sim"+(sim>=SIM_WARN?" warn":" low"); }
   tr.classList.toggle("simwarn", typeof sim==="number" && sim>=SIM_WARN);
