@@ -555,10 +555,10 @@ const CLICHES = ["적극적으로 참여함","성실한 태도로","모범을 �
 const PROVIDERS={
   gemini:{ label:"Gemini", name:"Google AI Studio", url:"https://aistudio.google.com", keyHint:"AIza…", placeholder:"AIza... 키 붙여넣기",
     models:[
-      ["gemini-3.1-flash-lite","gemini-3.1-flash-lite — 가볍고 빠름 (기본)"],
-      ["gemini-3.5-flash","gemini-3.5-flash — 최신·고품질"],
-      ["gemini-2.5-flash","gemini-2.5-flash — 안정판"],
-      ["gemini-2.5-flash-lite","gemini-2.5-flash-lite — 가장 가벼움"]
+      ["gemini-2.5-flash","gemini-2.5-flash — 안정판 (기본·권장)"],
+      ["gemini-2.5-flash-lite","gemini-2.5-flash-lite — 가볍고 빠름"],
+      ["gemini-3.5-flash","gemini-3.5-flash — 최신 (시험용)"],
+      ["gemini-3.1-flash-lite","gemini-3.1-flash-lite — 최신·가벼움 (시험용)"]
     ],
     // 무료 등급에서 빠졌거나 종료된 모델: 저장돼 있으면 기본 모델로 되돌림
     retired:/^gemini-(1\.|2\.0-|2\.5-pro|3(\.\d)?-pro)/ },
@@ -621,6 +621,13 @@ function applyProviderUI(){
   $("keyInput").value=apiKey;
   let savedModel=""; try{ savedModel=localStorage.getItem(PMODEL(state.provider))||""; }catch(e){}
   if(savedModel && p.retired && p.retired.test(savedModel)){ savedModel=""; try{ localStorage.removeItem(PMODEL(state.provider)); }catch(e){} }
+  // 2026-11: 기본 모델을 3.1-flash-lite → 2.5-flash로 변경. 예전 기본값이 저장된 경우 한 번만 새 기본값으로 옮김
+  try{
+    if(state.provider==="gemini" && !localStorage.getItem("sgb_model_mig_2611")){
+      if(savedModel==="gemini-3.1-flash-lite"){ savedModel="gemini-2.5-flash"; localStorage.setItem(PMODEL("gemini"),savedModel); }
+      localStorage.setItem("sgb_model_mig_2611","1");
+    }
+  }catch(e){}
   renderModels(savedModel);
 }
 
